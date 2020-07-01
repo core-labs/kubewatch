@@ -36,6 +36,7 @@ type Handler struct {
 	Flock      Flock      `json:"flock"`
 	Webhook    Webhook    `json:"webhook"`
 	MSTeams    MSTeams    `json:"msteams"`
+	DingTalk   DingTalk   `json:"dingtalk"`
 }
 
 // Resource contains resource configuration
@@ -97,6 +98,11 @@ type Webhook struct {
 // MSTeams contains MSTeams configuration
 type MSTeams struct {
 	WebhookURL string `json:"webhookurl"`
+}
+
+type DingTalk struct {
+	Url    string `json:"url"`
+	Secret string `json:"secret"`
 }
 
 // New creates new config object

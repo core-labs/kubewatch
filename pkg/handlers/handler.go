@@ -18,6 +18,7 @@ package handlers
 
 import (
 	"github.com/bitnami-labs/kubewatch/config"
+	"github.com/bitnami-labs/kubewatch/pkg/handlers/dingtalk"
 	"github.com/bitnami-labs/kubewatch/pkg/handlers/flock"
 	"github.com/bitnami-labs/kubewatch/pkg/handlers/hipchat"
 	"github.com/bitnami-labs/kubewatch/pkg/handlers/mattermost"
@@ -45,6 +46,7 @@ var Map = map[string]interface{}{
 	"flock":      &flock.Flock{},
 	"webhook":    &webhook.Webhook{},
 	"ms-teams":   &msteam.MSTeams{},
+	"dingtalk":   &dingtalk.DingTalk{},
 }
 
 // Default handler implements Handler interface,

@@ -8,9 +8,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/bitnami-labs/kubewatch/config"
+	kbEvent "github.com/bitnami-labs/kubewatch/pkg/event"
+	"log"
 	"net/http"
-	"os"
 	uri "net/url"
+	"os"
 	"strconv"
 	"time"
 )
@@ -33,6 +35,16 @@ type DingTalk struct {
 	Secret string
 }
 
+type DingTalkMessage struct {
+	Type     string                  `json:"msgtype"`
+	Markdown DingTalkMarkdownMessage `json:"markdown"`
+}
+
+type DingTalkMarkdownMessage struct {
+	Title string `json:"title"`
+	Text  string `json:"text"`
+}
+
 func (d *DingTalk) Init(c *config.Config) error {
 	url := c.Handler.DingTalk.Url
 	secret := c.Handler.DingTalk.Secret
@@ -52,22 +64,32 @@ func (d *DingTalk) Init(c *config.Config) error {
 }
 
 func (d *DingTalk) ObjectCreated(obj interface{}) {
-	panic("implement me")
+	notifyDingTalk(d, obj, "created")
 }
 
 func (d *DingTalk) ObjectDeleted(obj interface{}) {
-	panic("implement me")
+	notifyDingTalk(d, obj, "deleted")
 }
 
 func (d *DingTalk) ObjectUpdated(oldObj, newObj interface{}) {
-	panic("implement me")
+	notifyDingTalk(d, newObj, "updated")
 }
 
 func (d *DingTalk) TestHandler() {
-	panic("implement me")
-}
+	message := &DingTalkMessage{
+		Type: "markdown",
+		Markdown: DingTalkMarkdownMessage{
+			Title: "测试资源更新",
+			Text:  fmt.Sprintf("#### Kubewatch 测试 \n> 命名空间 **`%s`** 中的 **`%s`** 已经被 **`%s`**:\n**`%s`**", "default", "Deployment", "Created", "test"),
+		},
+	}
 
-type DingtalkMessage struct {
+	err := postMessage(d.Url, d.Secret, message)
+	if err != nil {
+		log.Printf("%s\n", err)
+		return
+	}
+	log.Printf("Message successfully sent to url %s at %s", d.Url, time.Now())
 }
 
 func checkMissingDingTalkVars(talk *DingTalk) error {
@@ -75,11 +97,56 @@ func checkMissingDingTalkVars(talk *DingTalk) error {
 	if talk.Url == "" || talk.Secret == "" {
 		return fmt.Errorf(dingtalkErrMsg, "Missing DingTalk url or secret")
 	}
-
 	return nil
-
 }
-func postMessage(url string, secret string, msg *DingtalkMessage) error {
+
+func notifyDingTalk(d *DingTalk, obj interface{}, action string) {
+	e := kbEvent.New(obj, action)
+
+	dingtalkMessage := prepareDingtalkMessage(e, d)
+
+	err := postMessage(d.Url, d.Secret, dingtalkMessage)
+	if err != nil {
+		log.Printf("%s\n", err)
+		return
+	}
+
+	log.Printf("Message successfully sent to channel %s at %s", d.Url, time.Now())
+}
+
+func prepareDingtalkMessage(e kbEvent.Event, m *DingTalk) *DingTalkMessage {
+
+	return &DingTalkMessage{
+		Type: "markdown",
+		Markdown: DingTalkMarkdownMessage{
+			Title: fmt.Sprintf("%s 被 %s", e.Kind, e.Status),
+			Text:  eventI18n(e),
+		},
+	}
+}
+
+func eventI18n(e kbEvent.Event) string {
+	var msg string
+	switch e.Kind {
+	case "namespace":
+		msg = fmt.Sprintf(
+			"> 命名空间 `%s` 已经被 `%s`",
+			e.Name,
+			e.Reason,
+		)
+	default:
+		msg = fmt.Sprintf(
+			"> 命名空间 `%s` 中的 `%s` 已经被 `%s`:\n`%s`",
+			e.Namespace,
+			e.Kind,
+			e.Reason,
+			e.Name,
+		)
+	}
+	return msg
+}
+
+func postMessage(url string, secret string, msg *DingTalkMessage) error {
 
 	message, err := json.Marshal(msg)
 	if err != nil {
@@ -97,7 +164,9 @@ func postMessage(url string, secret string, msg *DingtalkMessage) error {
 	qs.Set("timestamp", t)
 	qs.Set("sign", SignRequestData(t, secret))
 
-	req, err := http.NewRequest("POST", qs.Encode(), bytes.NewBuffer(message))
+	u.RawQuery = qs.Encode()
+
+	req, err := http.NewRequest("POST", u.String(), bytes.NewBuffer(message))
 	if err != nil {
 		return err
 	}

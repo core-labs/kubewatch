@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/sirupsen/logrus"
 	"github.com/bitnami-labs/kubewatch/config"
 	c "github.com/bitnami-labs/kubewatch/pkg/client"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -46,6 +46,7 @@ supported webhooks:
  - mattermost
  - flock
  - webhook
+ - dingtalk
 `,
 
 	Run: func(cmd *cobra.Command, args []string) {

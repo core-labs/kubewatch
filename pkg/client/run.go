@@ -17,6 +17,7 @@ limitations under the License.
 package client
 
 import (
+	"github.com/bitnami-labs/kubewatch/pkg/handlers/dingtalk"
 	"log"
 
 	"github.com/bitnami-labs/kubewatch/config"
@@ -54,6 +55,8 @@ func ParseEventHandler(conf *config.Config) handlers.Handler {
 		eventHandler = new(webhook.Webhook)
 	case len(conf.Handler.MSTeams.WebhookURL) > 0:
 		eventHandler = new(msteam.MSTeams)
+	case len(conf.Handler.DingTalk.Url) > 0 && len(conf.Handler.DingTalk.Secret) > 0:
+		eventHandler = new(dingtalk.DingTalk)
 	default:
 		eventHandler = new(handlers.Default)
 	}

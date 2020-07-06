@@ -362,6 +362,7 @@ func newResourceController(client kubernetes.Interface, eventHandler handlers.Ha
 			newEvent.key, err = cache.MetaNamespaceKeyFunc(old)
 			newEvent.eventType = "update"
 			newEvent.resourceType = resourceType
+			newEvent.namespace = utils.GetObjectMetaData(old).Namespace
 			logrus.WithField("pkg", "kubewatch-"+resourceType).Infof("Processing update to %v: %s", resourceType, newEvent.key)
 			if err == nil {
 				queue.Add(newEvent)
@@ -476,8 +477,9 @@ func (c *Controller) processItem(newEvent Event) error {
 		- enahace update event processing in such a way that, it send alerts about what got changed.
 		*/
 		kbEvent := event.Event{
-			Kind: newEvent.resourceType,
-			Name: newEvent.key,
+			Kind:      newEvent.resourceType,
+			Name:      newEvent.key,
+			Namespace: newEvent.namespace,
 		}
 		c.eventHandler.ObjectUpdated(obj, kbEvent)
 		return nil
